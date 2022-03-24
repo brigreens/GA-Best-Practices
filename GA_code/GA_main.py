@@ -27,8 +27,6 @@ def main():
 
     # number of polymers in population, can be 16, 32, 48, 64, 80, 96
     pop_size = 32
-    # initialization type. Can be 'random' or 'dissimilarity'
-    init_type = 'random'
     # selection method. Can be 'random', 'tournament', 'roulette', 'rank', 'SUS'
     selection_method = 'random'
     # mutation rate. Can be 0.1-0.9, in increments of 0.1
@@ -39,16 +37,21 @@ def main():
     # GA run file name, with the format of "parameter_changed parameter_value fitness_property"
     run_name = 'base' # lets change
 
-    # Create list of possible building block unit SMILES in specific format ([acc_term_L, don_core, acc_core, acc_term_R])
+    # name for parameter changed where we want the same initial state
+    initial_randstate_filename = 'convergence'
+
+    # Create list of possible building block unit SMILES in specific format
     unit_list = utils.make_unit_list()
 
     if restart == 'y':
         # reload parameters and random state from restart file
-        open_params = open('last_gen.p', 'rb')
+        last_gen_filename = 'last_gen_' + run_name + '.p'
+        open_params = open(last_gen_filename, 'rb')
         params = pickle.load(open_params)
         open_params.close()
 
-        open_rand = open('randstate.p', 'rb')
+        randstate_filename = 'randstate' + run_name + '.p'
+        open_rand = open(randstate_filename, 'rb')
         randstate = pickle.load(open_rand)
         random.setstate(randstate)
         open_rand.close()
@@ -57,12 +60,14 @@ def main():
         if initial_restart == 'n':
             # sets initial state
             randstate = random.getstate()
-            rand_file = open('initial_randstate.p', 'wb')
+            initial_randstate = 'initial_randstate' + initial_randstate_filename + '.p'
+            rand_file = open(initial_randstate, 'wb')
             pickle.dump(randstate, rand_file)
             rand_file.close()
         else:
             # re-opens intial state during troubleshooting
-            open_rand = open('initial_randstate.p', 'rb')
+            initial_randstate = 'initial_randstate' + initial_randstate_filename + '.p'
+            open_rand = open(initial_randstate, 'rb')
             randstate = pickle.load(open_rand)
             random.setstate(randstate)
             open_rand.close()
@@ -71,13 +76,15 @@ def main():
         params = init_gen(pop_size, init_type, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, unit_list)
 
         # pickle parameters needed for restart
-        params_file = open('last_gen.p', 'wb')
+        last_gen_filename = 'last_gen_' + run_name + '.p'
+        params_file = open(last_gen_filename, 'wb')
         pickle.dump(params, params_file)
         params_file.close()
 
         # pickle random state for restart
         randstate = random.getstate()
-        rand_file = open('randstate.p', 'wb')
+        randstate_filename = 'randstate' + run_name + '.p'
+        rand_file = open(randstate_filename, 'wb')
         pickle.dump(randstate, rand_file)
         rand_file.close()
 
@@ -87,13 +94,15 @@ def main():
         params = next_gen(params)
 
         # pickle parameters needed for restart
-        params_file = open('last_gen.p', 'wb')
+        last_gen_filename = 'last_gen_' + run_name + '.p'
+        params_file = open(last_gen_filename, 'wb')
         pickle.dump(params, params_file)
         params_file.close()
 
         # pickle random state for restart
         randstate = random.getstate()
-        rand_file = open('randstate.p', 'wb')
+        randstate_filename = 'randstate' + run_name + '.p'
+        rand_file = open(randstate_filename, 'wb')
         pickle.dump(randstate, rand_file)
         rand_file.close()
 
@@ -384,7 +393,7 @@ def elitist_select(ranked_population, elitism_perc, scoring_prop):
     
 
 
-def init_gen(pop_size, init_type, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, unit_list):
+def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, unit_list):
     # initialize generation counter
     gen_counter = 1
 
@@ -392,43 +401,34 @@ def init_gen(pop_size, init_type, selection_method, mutation_rate, elitism_perc,
     population = []
     population_str = []
 
-    if init_type == 'random':
-        while len(population) < pop_size:
-            temp_poly = []
-            # select monomer types for polymer
-            for num in range(2):
-                # randomly select a monomer index
-                poly_monomer = random.randint(0, len(unit_list) - 1)
-                temp_poly.append(poly_monomer)
 
-            # make SMILES string of polymer
-            temp_poly_smi = utils.make_polymer_smi(temp_poly, unit_list)
+    while len(population) < pop_size:
+        temp_poly = []
+        # select monomer types for polymer
+        for num in range(2):
+            # randomly select a monomer index
+            poly_monomer = random.randint(0, len(unit_list) - 1)
+            temp_poly.append(poly_monomer)
 
-            # checks molecule for errors RDKit would catch
-            try:
-                # convert to canonical SMILES to check for duplication
-                canonical_smiles = Chem.MolToSmiles(Chem.MolFromSmiles(temp_poly_smi))
-            except:
-                # prevents molecules with incorrect valence, which canonical smiles will catch and throw error
-                print(temp_poly_smi)
-                print('Incorrect valence, could not perform canonical smiles')
-                continue
+        # make SMILES string of polymer
+        temp_poly_smi = utils.make_polymer_smi(temp_poly, unit_list)
 
-            # check for duplication
-            if canonical_smiles in population_str:
-                continue
-            else:
-                population.append(temp_poly)
-                population_str.append(temp_poly_smi)
+        # checks molecule for errors RDKit would catch
+        try:
+            # convert to canonical SMILES to check for duplication
+            canonical_smiles = Chem.MolToSmiles(Chem.MolFromSmiles(temp_poly_smi))
+        except:
+            # prevents molecules with incorrect valence, which canonical smiles will catch and throw error
+            print(temp_poly_smi)
+            print('Incorrect valence, could not perform canonical smiles')
+            continue
 
-    elif init_type == 'dissimilarity':
-        while len(population) < pop_size:
-            temp_poly = []
-
-            # TODO: this entire section
-
-    else:
-        print('invalid initialization type')
+        # check for duplication
+        if canonical_smiles in population_str:
+            continue
+        else:
+            population.append(temp_poly)
+            population_str.append(temp_poly_smi)
 
 
     # create new analysis files
