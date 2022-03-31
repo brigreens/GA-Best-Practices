@@ -21,8 +21,6 @@ def main():
     initial_restart = 'n'
     # flag for restart from save
     restart = 'n'
-    # Run number (for use with same initial states), can be A, B, C, D, or E
-    run_label = 'A'
 
     # scoring property. Can be 'polar', 'opt_bg', or 'solv_eng'
     scoring_prop = 'polar'
@@ -36,20 +34,23 @@ def main():
     # elitism percentage. Percentage of top candidates to pass on to next generation. Can be 0, 0.25, 0.5
     elitism_perc = 0.5
 
-    # GA run file name, with the format of "parameter_changed parameter_value fitness_property run_label(ABCDE)"
-    run_name = 'base_' + run_label # lets change
+    # GA run file name, with the format of "parameter_changed parameter_value fitness_property"
+    run_name = 'base' # lets change
+
+    # name for parameter changed where we want the same initial state
+    initial_randstate_filename = 'convergence'
 
     # Create list of possible building block unit SMILES in specific format
     unit_list = utils.make_unit_list()
 
     if restart == 'y':
         # reload parameters and random state from restart file
-        last_gen_filename = '../last_gen_params/last_gen_' + run_name + '.p'
+        last_gen_filename = 'last_gen_' + run_name + '.p'
         open_params = open(last_gen_filename, 'rb')
         params = pickle.load(open_params)
         open_params.close()
 
-        randstate_filename = '../rand_states/randstate_' + run_name + '.p'
+        randstate_filename = 'randstate' + run_name + '.p'
         open_rand = open(randstate_filename, 'rb')
         randstate = pickle.load(open_rand)
         random.setstate(randstate)
@@ -59,13 +60,13 @@ def main():
         if initial_restart == 'n':
             # sets initial state
             randstate = random.getstate()
-            initial_randstate = '../initial_randstates/initial_randstate_' + run_label +'.p'
+            initial_randstate = 'initial_randstate' + initial_randstate_filename + '.p'
             rand_file = open(initial_randstate, 'wb')
             pickle.dump(randstate, rand_file)
             rand_file.close()
         else:
             # re-opens intial state during troubleshooting
-            initial_randstate = '../initial_randstates/initial_randstate_' + run_label + '.p'
+            initial_randstate = 'initial_randstate' + initial_randstate_filename + '.p'
             open_rand = open(initial_randstate, 'rb')
             randstate = pickle.load(open_rand)
             random.setstate(randstate)
@@ -75,14 +76,14 @@ def main():
         params = init_gen(pop_size, init_type, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, unit_list)
 
         # pickle parameters needed for restart
-        last_gen_filename = '../last_gen_params/last_gen_' + run_name + '.p'
+        last_gen_filename = 'last_gen_' + run_name + '.p'
         params_file = open(last_gen_filename, 'wb')
         pickle.dump(params, params_file)
         params_file.close()
 
         # pickle random state for restart
         randstate = random.getstate()
-        randstate_filename = '../rand_states/randstate_' + run_name + '.p'
+        randstate_filename = 'randstate' + run_name + '.p'
         rand_file = open(randstate_filename, 'wb')
         pickle.dump(randstate, rand_file)
         rand_file.close()
@@ -93,14 +94,14 @@ def main():
         params = next_gen(params)
 
         # pickle parameters needed for restart
-        last_gen_filename = '../last_gen_params/last_gen_' + run_name + '.p'
+        last_gen_filename = 'last_gen_' + run_name + '.p'
         params_file = open(last_gen_filename, 'wb')
         pickle.dump(params, params_file)
         params_file.close()
 
         # pickle random state for restart
         randstate = random.getstate()
-        randstate_filename = '../rand_states/randstate' + run_name + '.p'
+        randstate_filename = 'randstate' + run_name + '.p'
         rand_file = open(randstate_filename, 'wb')
         pickle.dump(randstate, rand_file)
         rand_file.close()
@@ -138,7 +139,7 @@ def next_gen(params):
     med_score = fitness_list[0][median]
     max_score = fitness_list[0][-1]
 
-    quick_filename = '../quick_files/quick_analysis' + run_name + '.csv'
+    quick_filename = 'quick_analysis' + run_name + '.csv'
     with open(quick_filename, mode='w+') as quick_file:
         # write to quick analysis file
         quick_writer = csv.writer(quick_file)
@@ -150,7 +151,7 @@ def next_gen(params):
         score = fitness_list[0][x]
 
         # write full analysis file
-        full_filename = '../full_files/full_analysis' + run_name + '.csv'
+        full_filename = 'full_analysis' + run_name + '.csv'
         with open(full_filename, mode='w+') as full_file:
             full_writer = csv.writer(full_file)
             full_writer.writerow([gen_counter, poly, poly_SMILES, score])
@@ -431,12 +432,12 @@ def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, 
 
 
     # create new analysis files
-    quick_filename = '../quick_files/quick_analysis' + run_name + '.csv'
+    quick_filename = 'quick_analysis' + run_name + '.csv'
     with open(quick_filename, mode='w+') as quick:
         quick_writer = csv.writer(quick)
         quick_writer.writerow(['gen', 'min_score', 'med_score', 'max_score'])
 
-    full_filename = '../full_files/full_analysis' + run_name + '.csv'
+    full_filename = 'full_analysis' + run_name + '.csv'
     with open(full_filename, mode='w+') as full:
         full_writer = csv.writer(full)
         full_writer.writerow(['gen', 'filename', 'SMILES', 'score'])
@@ -448,7 +449,7 @@ def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, 
     med_score = fitness_list[0][median]
     max_score = fitness_list[0][-1]
 
-    quick_filename = '../quick_files/quick_analysis' + run_name + '.csv'
+    quick_filename = 'quick_analysis' + run_name + '.csv'
     with open(quick_filename, mode='w+') as quick_file:
         # write to quick analysis file
         quick_writer = csv.writer(quick_file)
@@ -460,7 +461,7 @@ def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, 
         score = fitness_list[0][x]
 
         # write full analysis file
-        full_filename = '../full_files/full_analysis' + run_name + '.csv'
+        full_filename = 'full_analysis' + run_name + '.csv'
         with open(full_filename, mode='w+') as full_file:
             full_writer = csv.writer(full_file)
             full_writer.writerow([gen_counter, poly, poly_SMILES, score])

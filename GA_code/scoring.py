@@ -127,20 +127,20 @@ def fitness_function(population, population_str, scoring_prop):
     for x in range(len(population)):
         filename = utils.make_file_name(population[x])
         if scoring_prop == 'polar':
-            GFN2_file = 'GFN2/' + filename + '.out'
+            GFN2_file = '../calculations/GFN2/' + filename + '.out'
             GFN2_props = parse_GFN2(GFN2_file) #dipole_moment, polarizability
             polarizability = GFN2_props[1]
             score_list.append(polarizability)
             
 
         elif scoring_prop == 'opt_bg':
-            stda_file = 'sTDDFTxtb/' + filename + '.stda'
+            stda_file = '../calculations/sTDDFTxtb/' + filename + '.stda'
             opt_bg = parse_sTDA(stda_file)
             score_list.append(opt_bg)
 
         elif scoring_prop == 'solv_eng':
-            solv_water_file = 'solvation_water/' + filename + '.out'
-            solv_hexane_file = 'solvation_hexane/' + filename + '.out'
+            solv_water_file = '../calculations/solvation_water/' + filename + '.out'
+            solv_hexane_file = '../calculations/solvation_hexane/' + filename + '.out'
 
             # calculate solvation free energy of acceptor in water
             solv_water = solvation(solv_water_file)
