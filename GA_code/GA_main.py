@@ -1,17 +1,10 @@
 # Imports
-import sklearn
 import csv
-import os
-import subprocess
 import random
 import numpy as np
-from scipy import stats
-from statistics import mean
 from copy import deepcopy
 import pickle
 from rdkit import Chem
-from rdkit.Chem import AllChem
-from itertools import product
 
 import utils
 import scoring
@@ -72,7 +65,7 @@ def main():
             open_rand.close()
 
         # run initial generation if NOT loading from restart file
-        params = init_gen(pop_size, init_type, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, unit_list)
+        params = init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, unit_list)
 
         # pickle parameters needed for restart
         last_gen_filename = '../last_gen_params/last_gen_' + run_name + '.p'
@@ -106,7 +99,21 @@ def main():
         rand_file.close()
 
 def next_gen(params):
-   # params = [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop]
+    '''
+    Runs the next generation of the GA
+
+    Paramaters
+    ----------
+    params: list
+        list with specific order
+        params = [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop]
+    
+    Returns
+    --------
+    params: list
+        list with specific order
+        params = [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop]
+    '''
     pop_size = params[0]
     unit_list = params[1]
     gen_counter = params[2]
@@ -160,6 +167,25 @@ def next_gen(params):
     return(params)
 
 def parent_select(ranked_population, ranked_scores, selection_method, scoring_prop):
+    '''
+    Selects two parents. Method of selection depends on selection_method
+    
+    Parameters
+    ----------
+    ranked_population: list
+        ordered list of polymer names, ranked from best to worst
+    ranked_scores: list
+        ordered list of scores, ranked from best to worst
+    selection_method: str
+        Type of selection operation. Options are 'random', 'tournament', 'roulette', 'SUS', or 'rank'
+    scoring_prop: str
+        Fitness function property. Options are 'polar', 'opt_bg', 'solv_eng'
+
+    Returns
+    -------
+    parents: list
+        list of length 2 containing the two parent indicies
+    '''
     if selection_method == 'random':
         parents = []
         # randomly select two parents (as indexes from population) to cross
@@ -325,9 +351,41 @@ def parent_select(ranked_population, ranked_scores, selection_method, scoring_pr
     else:
         print('not a valid selection method')
 
+    return parents
+
 
 
 def select_crossover_mutate(ranked_population, ranked_scores, elitist_population, selection_method, mutation_rate, scoring_prop, pop_size, unit_list):
+    '''
+    Perform selection, crossover, and mutation operations
+
+    Parameters
+    ----------
+    ranked_population: list
+        ordered list containing lists of polymers of format [mon_1_index, mon_2_index]
+    ranked_scores: list
+        ordered list of scores of population
+    elitist_population: list
+        list of elite polymers to pass to next generation
+    selection_method: str
+        Type of selection operation. Options are 'random', 'tournament', 'roulette', 'SUS', or 'rank'
+    mutation_rate: int
+        Chance of polymer to undergo mutation
+    scoring_prop: str
+        Fitness function property. Options are 'polar', 'opt_bg', 'solv_eng'
+    pop_size: int
+        number of individuals in the population
+    unit_list: Dataframe
+        dataframe containing the SMILES of all monomers
+    
+    Returns
+    -------
+    new_pop: list
+        list of new polymers of format [mon_1_index, mon_2_index]
+    new_pop_smiles: list
+        list of the SMILES of the new polymers
+    '''
+    
     new_pop = deepcopy(elitist_population)
     new_pop_smiles = []
 
@@ -364,6 +422,23 @@ def select_crossover_mutate(ranked_population, ranked_scores, elitist_population
 
 
 def mutate(temp_child, unit_list, mut_rate):
+    '''
+    Mutation operator. Replaces one monomer with a new one
+
+    Parameters
+    -----------
+    temp_child: list
+        format is [mon_1_index, mon_2_index]
+    unit_list: Dataframe
+        dataframe containing the SMILES of all monomers
+    mut_rate: int
+        Chance of polymer to undergo mutation
+    
+    Return
+    ------
+    temp_child: list
+        format is [mon_1_index, mon_2_index]
+    '''
 
     # determine whether to mutate based on mutation rate
     rand = random.randint(1, 100)
@@ -380,7 +455,23 @@ def mutate(temp_child, unit_list, mut_rate):
 
     return temp_child
 
-def elitist_select(ranked_population, elitism_perc, scoring_prop):
+def elitist_select(ranked_population, elitism_perc):
+    '''
+    Selects a percentage of the top polymers to ensure in next generation
+    
+    Parameters
+    ----------
+    ranked_population: list
+        ordered list containing lists of polymers of format [mon_1_index, mon_2_index]
+    elitism_perc: float
+        percentage of generation to pass to next generation. Can range from 0-1 (although 1 is the entire generation)
+
+    Returns
+    -------
+    elitist_list: list
+        list of polymers each of format [mon_1_index, mon_2_index]
+    '''
+
     # find number of parents to pass to next generation
     elitist_count = int(len(ranked_population) * elitism_perc)
     elitist_list = []
@@ -391,8 +482,32 @@ def elitist_select(ranked_population, elitism_perc, scoring_prop):
     return elitist_list
     
 
-
 def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, unit_list):
+    '''
+    Create initial population
+
+    Parameters
+    -----------
+    pop_size: int
+        number of individuals in the population
+    selection_method: str
+        Type of selection operation. Options are 'random', 'tournament', 'roulette', 'SUS', or 'rank'
+    mutation_rate: int
+        Chance of polymer to undergo mutation
+    elitism_perc: float
+        percentage of generation to pass to next generation. Can range from 0-1 (although 1 is the entire generation)
+    run_name: str
+        name of this GA run
+    scoring_prop: str
+        Fitness function property. Options are 'polar', 'opt_bg', 'solv_eng'
+    unit_list: Dataframe
+        dataframe containing the SMILES of all monomers
+    
+    Returns
+    -------
+    params: list
+        format is [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop]
+    '''
     # initialize generation counter
     gen_counter = 1
 

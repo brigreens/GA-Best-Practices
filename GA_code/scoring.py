@@ -50,7 +50,20 @@ def parse_GFN2(filename):
         return outputs
     
 def parse_sTDA(filename):
-    
+    '''
+    Parses through sTD-DFT-xTB output files
+
+    Parameters
+    -----------
+    filename: str
+        path to output file
+
+    Returns
+    -------
+    opt_bg: float
+        optical bandgap 
+        energy of the first transition within the first 12 transition with an oscillator strength greater than 0.5 
+    '''
     with open(filename, 'r', encoding = 'utf-8') as file:
         line = file.readline()
         oscs = []
@@ -88,6 +101,19 @@ def parse_sTDA(filename):
 
 
 def solvation(filename):
+    '''
+    Parses through xTB output files for solvation energy
+
+    Parameters
+    -----------
+    filename: str
+        path to output file
+
+    Returns
+    -------
+    solvation_energy: float
+        solvation energy 
+    '''
     with open(filename, 'r', encoding = 'utf-8') as file:
         line = file.readline()
         while line:

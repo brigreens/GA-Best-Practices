@@ -1,21 +1,12 @@
-
-from copy import deepcopy
-from itertools import product
 import pandas as pd
-import numpy as np
-from itertools import product
-
 
 def make_unit_list():
     '''
-    Makes a list of dataframe of the SMILES of different types of building block units
-    Contains: smi_filename, smiles, sTDDFTxtb_HOMO, calibrated B3LYP_HOMO, A_or_D, fused_ring_count
-
+    Makes a dataframe containing the monomer SMILES
     Returns
     -------
-    units: list
-        list of dataframes containing SMILES, filenames, HOMO, A_or_D, and fused ring count
-        [left_terminals, fused_cores, right_terminals, spacers]
+    units: dataframe
+        contains 1 column of monomer SMILES
     '''
     # TODO: add correct csv containing monomer unit SMILES
     units = pd.read_csv('GA4_donor_units.csv', index_col=0)
@@ -30,7 +21,7 @@ def make_file_name(polymer):
     Parameters
     ---------
     polymer: list (specific format)
-        [(#,#,...), A, B]
+        [A, B]
 
     Returns
     -------
@@ -58,12 +49,12 @@ def make_polymer_smi(temp_poly, unit_list):
     ---------
     polymer: list (specific format)
         [A, B]
-    smiles_list: list
-        list of all possible monomer SMILES
+    unit_list: dataframe
+        contains all monomer SMILES
 
     Returns
     -------
-    poly_string: str
+    poly_smiles: str
         polymer SMILES string
     '''
     poly_smiles = ''
@@ -76,7 +67,21 @@ def make_polymer_smi(temp_poly, unit_list):
     
 def binSearch(wheel, num):
     '''
-    Finds what pie in a wheel the number belongs in. Works with the SUS selection method
+    Finds what pie (or individual) in a wheel the number belongs in. Works with the SUS selection method
+
+    Parameters
+    ----------
+    wheel: list
+        contains list of lists of format [lower_limit, upper_limit, ranked_scores, ranked_population]
+    num: float
+        random number between 0 and 1
+    
+    Returns
+    -------
+    score: float
+        fitness score of bin
+    polymer: list
+        [mon_1_index, mon_2_index]
     '''
     mid = len(wheel)//2
     low, high, score, polymer = wheel[mid]
@@ -89,7 +94,21 @@ def binSearch(wheel, num):
 
 def rank_binSearch(wheel, num):
     '''
-    Finds what pie in a wheel the number belongs in. Works with the SUS selection method
+    Finds what pie in a wheel the number belongs in. Works with the rank selection method
+
+    Parameters
+    ----------
+    wheel: list
+        contains list of lists of format [lower_limit, upper_limit, ranked_scores, ranked_population]
+    num: float
+        random number between 0 and 1
+    
+    Returns
+    -------
+    score: float
+        fitness score of bin
+    polymer: list
+        [mon_1_index, mon_2_index]
     '''
     mid = len(wheel)//2
     low, high, polymer = wheel[mid]
