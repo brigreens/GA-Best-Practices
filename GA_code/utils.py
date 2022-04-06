@@ -9,7 +9,7 @@ def make_unit_list():
         contains 1 column of monomer SMILES
     '''
     # TODO: add correct csv containing monomer unit SMILES
-    units = pd.read_csv('GA4_donor_units.csv', index_col=0)
+    units = pd.read_csv('../monomer_SMILES.csv', index_col=False)
 
     return units
 
