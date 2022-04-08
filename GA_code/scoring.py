@@ -200,7 +200,50 @@ def fitness_function(population, population_str, scoring_prop):
     return ranked_population
 
 
+def fitness_individual(polymer, scoring_prop):
+    '''
+    Returns the fitness score of an individual 
     
+    Parameters
+    ----------
+    polymer: list
+        specific order [monomer 1 index, monomer 2 index]
+    scoring_prop: str
+        can be 'polar', 'opt_bg', or 'solv_eng'
+
+    Returns
+    -------
+    Returns the score depending on the property (polarizability, optical bandgap, or solvation ratio)
+    '''
+
+    filename = utils.make_file_name(polymer)
+    if scoring_prop == 'polar':
+        GFN2_file = '../calculations/GFN2/' + filename + '.out'
+        GFN2_props = parse_GFN2(GFN2_file) #dipole_moment, polarizability
+        polarizability = GFN2_props[1]
+        return polarizability
+
+    elif scoring_prop == 'opt_bg':
+        stda_file = '../calculations/sTDDFTxtb/' + filename + '.stda'
+        opt_bg = parse_sTDA(stda_file)
+        return opt_bg
+
+    elif scoring_prop == 'solv_eng':
+        solv_water_file = '../calculations/solvation_water/' + filename + '.out'
+        solv_hexane_file = '../calculations/solvation_hexane/' + filename + '.out'
+
+        # calculate solvation free energy of acceptor in water
+        solv_water = solvation(solv_water_file)
+        # calculate solvation free energy of acceptor in hexane
+        solv_hexane = solvation(solv_hexane_file) 
+        # ratio of water solvation energy to hexane solvation energy
+        ratio_water_hexane = solv_water / solv_hexane
+
+        return ratio_water_hexane
+    else:
+        print('Not a valid scoring property')
+        return None
+
 
 
 
