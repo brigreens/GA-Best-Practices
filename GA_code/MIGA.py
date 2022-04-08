@@ -413,7 +413,31 @@ def migration(params):
     else:
         print("not a valid topology")
         new_island_fitness_lists = 0
-        
+
+    # check and replace duplicates
+    for island in new_island_fitness_lists:
+        unique_individuals = []
+        for x in range(len(new_island_fitness_lists[island][2])):
+            if new_island_fitness_lists[island][2][x] not in unique_individuals:
+                unique_individuals.append(new_island_fitness_lists[island][2][x])
+            else:
+                while new_island_fitness_lists[island][2][x] in unique_individuals:
+                    temp_poly = []
+                    # select monomer types for polymer
+                    for num in range(2):
+                        # randomly select a monomer index
+                        poly_monomer = random.randint(0, len(unit_list) - 1)
+                        temp_poly.append(poly_monomer)
+
+                    # make SMILES string of polymer
+                    temp_poly_smi = utils.make_polymer_smi(temp_poly, unit_list)
+
+                    score = scoring.fitness_individual(temp_poly, scoring_prop)
+
+                    new_island_fitness_lists[island][2][x] = temp_poly
+                    new_island_fitness_lists[island][1][x] = temp_poly_smi
+                    new_island_fitness_lists[island][0][x] = score
+
     # re-order the lists based on scores, in ascending order
     ranked_island_fitness_lists = []
     for i in new_island_fitness_lists:
