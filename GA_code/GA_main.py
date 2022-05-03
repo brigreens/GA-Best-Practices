@@ -4,7 +4,6 @@ import random
 import numpy as np
 from copy import deepcopy
 import pickle
-from rdkit import Chem
 
 import utils
 import scoring
@@ -15,7 +14,7 @@ def main():
     # flag for restart from save
     restart = 'n'
     # Run number (for use with same initial states), can be A, B, C, D, or E
-    run_label = 'A'
+    run_label = 'E'
 
     # scoring property. Can be 'polar', 'opt_bg', or 'solv_eng'
     scoring_prop = 'polar'
@@ -23,14 +22,15 @@ def main():
     # number of polymers in population, can be 16, 32, 48, 64, 80, 96
     pop_size = 32
     # selection method. Can be 'random', 'tournament', 'roulette', 'rank', 'SUS'
-    selection_method = 'random'
+    selection_method = 'SUS'
     # mutation rate. Can be 0.1-0.9, in increments of 0.1
     mutation_rate = 0.4
     # elitism percentage. Percentage of top candidates to pass on to next generation. Can be 0, 0.25, 0.5
     elitism_perc = 0.5
 
+    # NEED TO CHANGE FOR EACH RUN!!!!!!!!!!!!!!!!!!!
     # GA run file name, with the format of "parameter_changed parameter_value fitness_property run_label(ABCDE)"
-    run_name = 'base_' + run_label # lets change
+    run_name = 'test_' + scoring_prop + '_' + run_label 
 
     # Create list of possible building block unit SMILES in specific format
     unit_list = utils.make_unit_list()
@@ -125,42 +125,41 @@ def next_gen(params):
     scoring_prop = params[8]
 
     gen_counter +=1
-    ranked_population = fitness_list[2]
+    ranked_population = fitness_list[1]
     ranked_scores = fitness_list[0]
 
     if scoring_prop == 'polar':
         ranked_population.reverse()
         ranked_scores.reverse()
 
-    # Select perectnage of top performers for next geenration - "elitism"
-    elitist_population = elitist_select(ranked_population, elitism_perc, scoring_prop)
+    # Select perectnage of top performers for next genration - "elitism"
+    elitist_population = elitist_select(ranked_population, elitism_perc)
 
     # Selection, Crossover & Mutation - create children to repopulate bottom 50% of NFAs in population
-    new_population, new_population_smiles = select_crossover_mutate(ranked_population, ranked_scores, elitist_population, selection_method, mutation_rate, scoring_prop, pop_size, unit_list)
+    new_population = select_crossover_mutate(ranked_population, ranked_scores, elitist_population, selection_method, mutation_rate, scoring_prop, pop_size, unit_list)
 
-    fitness_list = scoring.fitness_function(new_population, new_population_smiles, scoring_prop) # [ranked_score, ranked_poly_SMILES, ranked_poly_population]
+    fitness_list = scoring.fitness_function(new_population, scoring_prop) # [ranked_score, ranked_poly_population]
 
     min_score = fitness_list[0][0]
     median = int((len(fitness_list[0])-1)/2)
     med_score = fitness_list[0][median]
     max_score = fitness_list[0][-1]
 
-    quick_filename = '../quick_files/quick_analysis' + run_name + '.csv'
-    with open(quick_filename, mode='w+') as quick_file:
+    quick_filename = '../quick_files/quick_analysis_' + run_name + '.csv'
+    with open(quick_filename, mode='a+') as quick_file:
         # write to quick analysis file
         quick_writer = csv.writer(quick_file)
         quick_writer.writerow([gen_counter, min_score, med_score, max_score])
 
     for x in range(len(fitness_list[0])):
-        poly = fitness_list[2][x]
-        poly_SMILES = fitness_list[1][x]
+        poly = fitness_list[1][x]
         score = fitness_list[0][x]
 
         # write full analysis file
-        full_filename = '../full_files/full_analysis' + run_name + '.csv'
-        with open(full_filename, mode='w+') as full_file:
+        full_filename = '../full_files/full_analysis_' + run_name + '.csv'
+        with open(full_filename, mode='a+') as full_file:
             full_writer = csv.writer(full_file)
-            full_writer.writerow([gen_counter, poly, poly_SMILES, score])
+            full_writer.writerow([gen_counter, poly, score])
 
     params = [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop]
     
@@ -387,12 +386,6 @@ def select_crossover_mutate(ranked_population, ranked_scores, elitist_population
     '''
     
     new_pop = deepcopy(elitist_population)
-    new_pop_smiles = []
-
-    # initialize new population with elitists
-    for poly in new_pop:
-        smiles = utils.make_polymer_smi(poly, unit_list)
-        new_pop_smiles.append(smiles)
 
     # loop until enough children have been added to reach population size
     while len(new_pop) < pop_size:
@@ -410,15 +403,15 @@ def select_crossover_mutate(ranked_population, ranked_scores, elitist_population
         # give child opportunity for mutation
         temp_child = mutate(temp_child, unit_list, mutation_rate)
 
+        temp_child.sort()
+
         # check for duplication
         if temp_child in new_pop:
             pass
         else:
-            temp_poly_smi = utils.make_polymer_smi(temp_child, unit_list)
-            new_pop_smiles.append(temp_poly_smi)
             new_pop.append(temp_child)       
 
-    return new_pop, new_pop_smiles
+    return new_pop
 
 
 def mutate(temp_child, unit_list, mut_rate):
@@ -513,8 +506,6 @@ def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, 
 
     # create inital population as list of polymers
     population = []
-    population_str = []
-
 
     while len(population) < pop_size:
         temp_poly = []
@@ -524,61 +515,49 @@ def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, 
             poly_monomer = random.randint(0, len(unit_list) - 1)
             temp_poly.append(poly_monomer)
 
-        # make SMILES string of polymer
-        temp_poly_smi = utils.make_polymer_smi(temp_poly, unit_list)
-
-        # checks molecule for errors RDKit would catch
-        try:
-            # convert to canonical SMILES to check for duplication
-            canonical_smiles = Chem.MolToSmiles(Chem.MolFromSmiles(temp_poly_smi))
-        except:
-            # prevents molecules with incorrect valence, which canonical smiles will catch and throw error
-            print(temp_poly_smi)
-            print('Incorrect valence, could not perform canonical smiles')
-            continue
+        # sorts the monomer indices in ascending order (for file naming convention)
+        temp_poly.sort()
 
         # check for duplication
-        if canonical_smiles in population_str:
+        if temp_poly in population:
             continue
         else:
             population.append(temp_poly)
-            population_str.append(temp_poly_smi)
 
 
     # create new analysis files
-    quick_filename = '../quick_files/quick_analysis' + run_name + '.csv'
+    quick_filename = '../quick_files/quick_analysis_' + run_name + '.csv'
     with open(quick_filename, mode='w+') as quick:
         quick_writer = csv.writer(quick)
         quick_writer.writerow(['gen', 'min_score', 'med_score', 'max_score'])
 
-    full_filename = '../full_files/full_analysis' + run_name + '.csv'
+    full_filename = '../full_files/full_analysis_' + run_name + '.csv'
     with open(full_filename, mode='w+') as full:
         full_writer = csv.writer(full)
-        full_writer.writerow(['gen', 'filename', 'SMILES', 'score'])
+        full_writer.writerow(['gen', 'filename', 'score'])
 
-    fitness_list = scoring.fitness_function(population, population_str, scoring_prop) # [ranked_score, ranked_poly_SMILES, ranked_poly_population] 
+    fitness_list = scoring.fitness_function(population, scoring_prop) # [ranked_score, ranked_poly_population] 
 
     min_score = fitness_list[0][0]
     median = int((len(fitness_list[0])-1)/2)
     med_score = fitness_list[0][median]
     max_score = fitness_list[0][-1]
 
-    quick_filename = '../quick_files/quick_analysis' + run_name + '.csv'
-    with open(quick_filename, mode='w+') as quick_file:
+    quick_filename = '../quick_files/quick_analysis_' + run_name + '.csv'
+    with open(quick_filename, mode='a+') as quick_file:
         # write to quick analysis file
         quick_writer = csv.writer(quick_file)
         quick_writer.writerow([1, min_score, med_score, max_score])
 
     for x in range(len(fitness_list[0])):
-        poly = fitness_list[2][x]
-        poly_SMILES = fitness_list[1][x]
+        poly = fitness_list[1][x]
         score = fitness_list[0][x]
 
         # write full analysis file
-        full_filename = '../full_files/full_analysis' + run_name + '.csv'
-        with open(full_filename, mode='w+') as full_file:
+        full_filename = '../full_files/full_analysis_' + run_name + '.csv'
+        with open(full_filename, mode='a+') as full_file:
             full_writer = csv.writer(full_file)
-            full_writer.writerow([gen_counter, poly, poly_SMILES, score])
+            full_writer.writerow([gen_counter, poly, score])
 
     params = [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop]
     

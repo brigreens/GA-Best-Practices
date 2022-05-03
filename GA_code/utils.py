@@ -8,7 +8,6 @@ def make_unit_list():
     units: dataframe
         contains 1 column of monomer SMILES
     '''
-    # TODO: add correct csv containing monomer unit SMILES
     units = pd.read_csv('../monomer_SMILES.csv', index_col=False)
 
     return units
@@ -31,8 +30,8 @@ def make_file_name(polymer):
     '''
 
     # capture monomer indexes as strings for file naming
-    mono1 = str(polymer[1])
-    mono2 = str(polymer[2])
+    mono1 = str(polymer[0])
+    mono2 = str(polymer[1])
 
     # make file name string
     file_name = '%s_%s_010101' % (mono1, mono2)
@@ -115,6 +114,6 @@ def rank_binSearch(wheel, num):
     if low<=num<=high:
         return polymer
     elif high < num:
-        return binSearch(wheel[mid+1:], num)
+        return rank_binSearch(wheel[mid+1:], num)
     else:
-        return binSearch(wheel[:mid], num)
+        return rank_binSearch(wheel[:mid], num)
