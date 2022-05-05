@@ -117,3 +117,31 @@ def rank_binSearch(wheel, num):
         return rank_binSearch(wheel[mid+1:], num)
     else:
         return rank_binSearch(wheel[:mid], num)
+
+
+# note: population is list of lists [[mono1,mono2], [mono1,mono2], ...]
+def get_monomer_freq(population, mono_df, gen):
+   
+    # create new freq column of 0's
+    new_col = 'freq_%d' % gen
+    old_col = 'freq_%d' % (gen-1)
+    mono_df[new_col] = mono_df[old_col].copy()
+   
+    # loop through population and count monomer frequency
+    for polymer in population:
+        for monomer in polymer:
+            mono_df.loc[monomer,new_col] = mono_df.loc[monomer,new_col]+1
+    
+    return(mono_df)
+
+def get_ranked_idx(mono_df, gen):
+    
+    col = 'freq_%d' % gen
+    
+    ranked_idx = mono_df[col].copy()
+    ranked_idx = ranked_idx.sort_values(ascending=False)
+    
+    # get ranked indexes as ndarray
+    ranked_idx = ranked_idx.index.to_numpy()
+    
+    return(ranked_idx)

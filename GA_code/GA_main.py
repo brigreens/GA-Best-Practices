@@ -4,6 +4,8 @@ import random
 import numpy as np
 from copy import deepcopy
 import pickle
+import pandas as pd
+from scipy.stats import Spearmanr
 
 import utils
 import scoring
@@ -27,6 +29,10 @@ def main():
     mutation_rate = 0.4
     # elitism percentage. Percentage of top candidates to pass on to next generation. Can be 0, 0.25, 0.5
     elitism_perc = 0.5
+
+    # Convergence threshold - # of consecutive generations that need to meet Spearman coefficient criterion before termination
+    conv_gen = 1
+    
 
     # NEED TO CHANGE FOR EACH RUN!!!!!!!!!!!!!!!!!!!
     # GA run file name, with the format of "parameter_changed parameter_value fitness_property run_label(ABCDE)"
@@ -81,7 +87,11 @@ def main():
         rand_file.close()
 
 
-    for x in range(99):
+    # Initialize Spearman coefficient counter - # of consecutive gens with a Spearman coeff that meets criterion
+    spear_counter = 0
+
+    # for x in range(99):
+    while spear_counter < conv_gen:
         # run next generation of GA
         params = next_gen(params)
 
@@ -97,6 +107,9 @@ def main():
         rand_file = open(randstate_filename, 'wb')
         pickle.dump(randstate, rand_file)
         rand_file.close()
+
+        # update convergence counter
+        spear_counter = params[9]
 
 def next_gen(params):
     '''
@@ -123,6 +136,8 @@ def next_gen(params):
     elitism_perc = params[6]
     run_name = params[7]
     scoring_prop = params[8]
+    spear_counter = params[9]
+    mono_df = params[10]
 
     gen_counter +=1
     ranked_population = fitness_list[1]
@@ -132,7 +147,7 @@ def next_gen(params):
         ranked_population.reverse()
         ranked_scores.reverse()
 
-    # Select perectnage of top performers for next genration - "elitism"
+    # Select percentage of top performers for next genration - "elitism"
     elitist_population = elitist_select(ranked_population, elitism_perc)
 
     # Selection, Crossover & Mutation - create children to repopulate bottom 50% of NFAs in population
@@ -161,7 +176,24 @@ def next_gen(params):
             full_writer = csv.writer(full_file)
             full_writer.writerow([gen_counter, poly, score])
 
-    params = [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop]
+    # calculate new monomer frequencies
+    old_freq = mono_df
+    mono_df = utils.get_monomer_freq(ranked_population, mono_df, gen_counter)
+
+    # get ranked index arrays for Spearman correlation
+    old_ranks = utils.get_ranked_idx(old_freq, gen)
+    new_ranks = utils.get_ranked_idx(mono_df, gen)
+
+    # calculate Spearman correlation coefficient
+    spear = Spearmanr(old_ranks, new_ranks)[0]
+
+    # keep track of number of successive generations meeting Spearman criterion
+    if spear > 0:
+        spear_counter += 1
+    else:
+        spear_counter = 0
+
+    params = [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, spear_counter, mono_df]
     
     return(params)
 
@@ -499,10 +531,18 @@ def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, 
     Returns
     -------
     params: list
-        format is [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop]
+        format is [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, spear_counter, mono_df]
     '''
     # initialize generation counter
     gen_counter = 1
+
+    # initialize convergence counter
+    spear_counter = 0
+
+    # create monomer frequency df [freq_0]
+    mono_df = pd.DataFrame(0, index=np.arange(len(unit_list)), columns=np.arange(1))
+    mono_df = mono_df.rename_axis('mono_idx')
+    mono_df = mono_df.rename(columns={0:'freq_0'})
 
     # create inital population as list of polymers
     population = []
@@ -524,6 +564,8 @@ def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, 
         else:
             population.append(temp_poly)
 
+    # calculate new monomer frequencies
+    mono_df = utils.get_monomer_freq(population, mono_df, gen_counter)
 
     # create new analysis files
     quick_filename = '../quick_files/quick_analysis_' + run_name + '.csv'
@@ -559,7 +601,7 @@ def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, 
             full_writer = csv.writer(full_file)
             full_writer.writerow([gen_counter, poly, score])
 
-    params = [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop]
+    params = [pop_size, unit_list, gen_counter, fitness_list, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, spear_counter, mono_df]
     
     return(params)
 
