@@ -205,11 +205,11 @@ def fitness_function(population, scoring_prop):
         filename = utils.make_file_name(population[x])
         if scoring_prop == 'polar':
             try:
-                GFN2_file = '../Calculations/GFN2/' + filename + '.out'
+                GFN2_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/GFN2/' + filename + '.out'
                 GFN2_props = parse_GFN2(GFN2_file) #dipole_moment, polarizability
                 polarizability = GFN2_props[1]
             except:
-                GFN2_file = '../Calculations/GFN2/' + filename + '.out.gz'
+                GFN2_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/GFN2/' + filename + '.out.gz'
                 GFN2_props = parse_GFN2_gzip(GFN2_file) #dipole_moment, polarizability
                 polarizability = GFN2_props[1]
             score_list.append(polarizability)
@@ -217,7 +217,7 @@ def fitness_function(population, scoring_prop):
 
         elif scoring_prop == 'opt_bg':
             try:
-                stda_file = '../Calculations/sTDDFTxtb/' + filename + '.stda'
+                stda_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/sTDDFTxtb/' + filename + '.stda'
                 opt_bg = parse_sTDA(stda_file)
             except:
                 print('error with this sTDA file')
@@ -226,8 +226,8 @@ def fitness_function(population, scoring_prop):
             score_list.append(opt_bg)
 
         elif scoring_prop == 'solv_eng':
-            solv_water_file = '../Calculations/solvation_water/' + filename + '.out'
-            solv_hexane_file = '../Calculations/solvation_hexane/' + filename + '.out'
+            solv_water_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/solvation_water/' + filename + '.out'
+            solv_hexane_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/solvation_hexane/' + filename + '.out'
 
             try:
                 # calculate solvation free energy of acceptor in water
@@ -285,19 +285,19 @@ def fitness_individual(polymer, scoring_prop):
 
     filename = utils.make_file_name(polymer)
     if scoring_prop == 'polar':
-        GFN2_file = '../Calculations/GFN2/' + filename + '.out'
+        GFN2_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/GFN2/' + filename + '.out'
         GFN2_props = parse_GFN2(GFN2_file) #dipole_moment, polarizability
         polarizability = GFN2_props[1]
         return polarizability
 
     elif scoring_prop == 'opt_bg':
-        stda_file = '../Calculations/sTDDFTxtb/' + filename + '.stda'
+        stda_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/sTDDFTxtb/' + filename + '.stda'
         opt_bg = parse_sTDA(stda_file)
         return opt_bg
 
     elif scoring_prop == 'solv_eng':
-        solv_water_file = '../Calculations/solvation_water/' + filename + '.out'
-        solv_hexane_file = '../Calculations/solvation_hexane/' + filename + '.out'
+        solv_water_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/solvation_water/' + filename + '.out'
+        solv_hexane_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/solvation_hexane/' + filename + '.out'
 
         # calculate solvation free energy of acceptor in water
         solv_water = solvation(solv_water_file)
