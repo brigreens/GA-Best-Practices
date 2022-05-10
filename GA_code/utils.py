@@ -145,3 +145,11 @@ def get_ranked_idx(mono_df, gen):
     ranked_idx = ranked_idx.index.to_numpy()
     
     return(ranked_idx)
+
+def not_valid(temp_child):
+    not_valid_polymers = [[4, 361], [94, 380], [31, 416], [252, 307], [266, 268]]
+
+    if temp_child in not_valid_polymers:
+        return True
+    else:
+        return False

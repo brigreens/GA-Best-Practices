@@ -16,7 +16,7 @@ def main():
     # flag for restart from save
     restart = 'n'
     # Run number (for use with same initial states), can be A, B, C, D, or E
-    run_label = 'E'
+    run_label = 'A'
 
     # scoring property. Can be 'polar', 'opt_bg', or 'solv_eng'
     scoring_prop = 'opt_bg'
@@ -24,7 +24,7 @@ def main():
     # number of polymers in population, can be 16, 32, 48, 64, 80, 96
     pop_size = 32
     # selection method. Can be 'random', 'tournament', 'roulette', 'rank', 'SUS'
-    selection_method = 'SUS'
+    selection_method = 'random'
     # mutation rate. Can be 0.1-0.9, in increments of 0.1
     mutation_rate = 0.4
     # elitism percentage. Percentage of top candidates to pass on to next generation. Can be 0, 0.25, 0.5
@@ -240,6 +240,7 @@ def parent_select(ranked_population, ranked_scores, selection_method, scoring_pr
         parents.append(ranked_population[parent_a])
         parents.append(ranked_population[parent_b])
 
+    # 3-way tournament selection
     elif selection_method == 'tournament':
         parents = []
         # select 2 parents
@@ -450,6 +451,8 @@ def select_crossover_mutate(ranked_population, ranked_scores, elitist_population
         # check for duplication
         if temp_child in new_pop:
             pass
+        elif utils.not_valid(temp_child) == True:
+            pass
         else:
             new_pop.append(temp_child)       
 
@@ -573,6 +576,8 @@ def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, 
         # check for duplication
         if temp_poly in population:
             continue
+        elif utils.not_valid(temp_poly) == True:
+            pass
         else:
             population.append(temp_poly)
 

@@ -1,3 +1,4 @@
+from ast import excepthandler
 import numpy as np
 import utils
 import gzip
@@ -235,10 +236,7 @@ def fitness_function(population, scoring_prop):
                 # calculate solvation free energy of acceptor in hexane
                 solv_hexane = solvation(solv_hexane_file) 
                 # ratio of water solvation energy to hexane solvation energy
-                if solv_hexane <= 0:
-                    ratio_water_hexane = 100000
-                else:
-                    ratio_water_hexane = solv_water / solv_hexane
+                ratio_water_hexane = (solv_water - solv_hexane) / abs(solv_water)
             except: 
                 print('error with solvation file')
                 print(filename)
@@ -299,12 +297,17 @@ def fitness_individual(polymer, scoring_prop):
         solv_water_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/solvation_water/' + filename + '.out'
         solv_hexane_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/solvation_hexane/' + filename + '.out'
 
-        # calculate solvation free energy of acceptor in water
-        solv_water = solvation(solv_water_file)
-        # calculate solvation free energy of acceptor in hexane
-        solv_hexane = solvation(solv_hexane_file) 
-        # ratio of water solvation energy to hexane solvation energy
-        ratio_water_hexane = solv_water / solv_hexane
+        try:
+            # calculate solvation free energy of acceptor in water
+            solv_water = solvation(solv_water_file)
+            # calculate solvation free energy of acceptor in hexane
+            solv_hexane = solvation(solv_hexane_file) 
+            
+            # ratio of water solvation energy to hexane solvation energy
+            ratio_water_hexane = (solv_water - solv_hexane) / abs(solv_water)
+        except:
+            ratio_water_hexane = 100000
+
 
         return ratio_water_hexane
     else:
