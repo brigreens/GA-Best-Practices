@@ -117,3 +117,11 @@ def rank_binSearch(wheel, num):
         return rank_binSearch(wheel[mid+1:], num)
     else:
         return rank_binSearch(wheel[:mid], num)
+
+def not_valid(temp_child):
+    not_valid_polymers = [[4, 361], [94, 380], [31, 416], [252, 307], [266, 268]]
+
+    if temp_child in not_valid_polymers:
+        return True
+    else:
+        return False
