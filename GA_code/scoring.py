@@ -225,6 +225,8 @@ def fitness_function(population, scoring_prop):
                 print(filename)
                 opt_bg = 10
             score_list.append(opt_bg)
+            print(filename)
+            print(opt_bg)
 
         elif scoring_prop == 'solv_eng':
             solv_water_file = '/ihome/ghutchison/blp62/GA_best_practices/Calculations/solvation_water/' + filename + '.out'
