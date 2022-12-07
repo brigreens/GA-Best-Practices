@@ -6,40 +6,71 @@ from copy import deepcopy
 import pickle
 import pandas as pd
 from scipy.stats import spearmanr
+import argparse
 
 import utils
 import scoring
 
-def main():
+
+
+def main(parameter_type, parameter, chem_property, run_label):
     # reuse initial state
     initial_restart = 'y'
     # flag for restart from save
     restart = 'n'
     # Run number (for use with same initial states), can be A, B, C, D, or E
-    run_label = 'A'
+    #run_label = 'D'
 
     # scoring property. Can be 'polar', 'opt_bg', or 'solv_eng'
-    scoring_prop = 'opt_bg'
+    #scoring_prop = 'polar'
 
-    # number of polymers in population, can be 16, 32, 48, 64, 80, 96
-    pop_size = 32
-    # selection method. Can be 'random', 'tournament', 'roulette', 'rank', 'SUS'
-    selection_method = 'random'
-    # mutation rate. Can be 0.1-0.9, in increments of 0.1
-    mutation_rate = 0.4
-    # elitism percentage. Percentage of top candidates to pass on to next generation. Can be 0, 0.25, 0.5
-    elitism_perc = 0.5
+    if parameter_type == 'pop_size':
+        # number of polymers in population, can be 16, 32, 48, 64, 80, 96
+        pop_size = int(parameter)
+
+        selection_method = 'random'
+        mutation_rate = 0.4
+        elitism_perc = 0.5
+
+    elif parameter_type == 'selection_method':
+        # selection method. Can be 'random', 'tournament_2', 'tournament_3', 'tournament_4', 'roulette', 'rank', 'SUS'
+        selection_method = parameter
+
+        pop_size = 32
+        mutation_rate = 0.4
+        elitism_perc = 0.5
+
+    elif parameter_type == 'mutation_rate':
+        # mutation rate. Can be 0.1-0.9, in increments of 0.1
+        mutation_rate = float(parameter)
+
+        pop_size =32
+        selection_method = 'random'
+        elitism_perc = 0.5
+
+        parameter = int(mutation_rate*100)
+
+    elif parameter_type == 'elitism_perc':
+        # elitism percentage. Percentage of top candidates to pass on to next generation. Can be 0, 0.25, 0.5
+        elitism_perc = float(parameter)
+
+        pop_size =32
+        selection_method = 'random'
+        mutation_rate = 0.4
+
+        parameter = int(elitism_perc*100)
+
+    else:
+        print('not a valid parameter type')
 
     # Spearman coefficient threshold - spearman coefficent must be greater than this value to trip the convergence counter
-    spear_thresh = 0.7
+    spear_thresh = 0.8
 
     # Convergence threshold - # of consecutive generations that need to meet Spearman coefficient threshold before termination
-    conv_gen = 10
+    conv_gen = 50
     
-
-    # NEED TO CHANGE FOR EACH RUN!!!!!!!!!!!!!!!!!!!
     # GA run file name, with the format of "parameter_changed parameter_value fitness_property run_label(ABCDE)"
-    run_name = 'test_' + scoring_prop + '_' + run_label 
+    run_name = parameter_type + '_' + str(parameter) + '_' + chem_property + '_' + run_label 
 
     # Create list of possible building block unit SMILES in specific format
     unit_list = utils.make_unit_list()
@@ -74,7 +105,7 @@ def main():
             open_rand.close()
 
         # run initial generation if NOT loading from restart file
-        params = init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, scoring_prop, unit_list, spear_thresh)
+        params = init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, chem_property, unit_list, spear_thresh)
 
         # pickle parameters needed for restart
         last_gen_filename = '../last_gen_params/last_gen_' + run_name + '.p'
@@ -92,8 +123,8 @@ def main():
     # get convergence counter from inital parameters
     spear_counter = params[11]
 
-    for x in range(500):
-    # while spear_counter < conv_gen:
+    #for x in range(500):
+    while spear_counter < conv_gen:
         # run next generation of GA
         params = next_gen(params)
 
@@ -218,7 +249,7 @@ def parent_select(ranked_population, ranked_scores, selection_method, scoring_pr
     ranked_scores: list
         ordered list of scores, ranked from best to worst
     selection_method: str
-        Type of selection operation. Options are 'random', 'tournament', 'roulette', 'SUS', or 'rank'
+        Type of selection operation. Options are 'random', 'random_top50', 'tournament', 'roulette', 'SUS', or 'rank'
     scoring_prop: str
         Fitness function property. Options are 'polar', 'opt_bg', 'solv_eng'
 
@@ -227,6 +258,7 @@ def parent_select(ranked_population, ranked_scores, selection_method, scoring_pr
     parents: list
         list of length 2 containing the two parent indicies
     '''
+    # randomly select parents
     if selection_method == 'random':
         parents = []
         # randomly select two parents (as indexes from population) to cross
@@ -240,8 +272,22 @@ def parent_select(ranked_population, ranked_scores, selection_method, scoring_pr
         parents.append(ranked_population[parent_a])
         parents.append(ranked_population[parent_b])
 
+    # randomly select parents from top 50% of population
+    elif selection_method == 'random_top50':
+        parents = []
+        # randomly select two parents (as indexes from population) to cross
+        parent_a = random.randint(0, len(ranked_population)/2 - 1)
+        parent_b = random.randint(0, len(ranked_population)/2 - 1)
+        # ensure parents are unique indiviudals
+        if len(ranked_population) > 1:
+            while parent_b == parent_a:
+                parent_b = random.randint(0, len(ranked_population)/2 - 1)
+
+        parents.append(ranked_population[parent_a])
+        parents.append(ranked_population[parent_b])
+
     # 3-way tournament selection
-    elif selection_method == 'tournament':
+    elif selection_method == 'tournament_3':
         parents = []
         # select 2 parents
         while len(parents) < 2:
@@ -276,51 +322,109 @@ def parent_select(ranked_population, ranked_scores, selection_method, scoring_pr
             if parent not in parents:
                 parents.append(parent)
 
-    elif selection_method == 'roulette':
-
-        '''# sum of scores
-        total_fitness = sum(ranked_scores)
-
-        if scoring_prop == 'polar':
-            # size of each pie, proportional to its fitness
-            relative_fitness = [f/total_fitness for f in ranked_scores]
-        else:
-            # givers larger pie size to smaller scores
-            relative_fitness = [1- f/total_fitness for f in ranked_scores]
-
-        # probabilities of each pie
-        probs = [sum(relative_fitness[:i+1]) for i in range(len(relative_fitness))]
-
+    # 4-way tournament selection
+    elif selection_method == 'tournament_4':
         parents = []
         # select 2 parents
         while len(parents) < 2:
-            # point on "wheel" where it should stop
-            point = random.uniform(0, sum(relative_fitness))
+            individuals = []
+            # select random individual 1
+            individual_1 =  random.randint(0, len(ranked_population) - 1)
+            individuals.append(individual_1)
+
+            # select random individual 2
+            individual_2 =  random.randint(0, len(ranked_population) - 1)
+            while individual_1 == individual_2:
+                individual_2 = random.randint(0, len(ranked_population) - 1)
+            individuals.append(individual_2)
+
+            # select random individual 3
+            individual_3 =  random.randint(0, len(ranked_population) - 1)
+            while ((individual_3 == individual_1) or (individual_3 == individual_2)):
+                individual_3 = random.randint(0, len(ranked_population) - 1)
+            individuals.append(individual_3)
+
+            # select random individual 4
+            individual_4 =  random.randint(0, len(ranked_population) - 1)
+            while ((individual_4 == individual_1) or (individual_4 == individual_2) or (individual_4 == individual_3)):
+                individual_4 = random.randint(0, len(ranked_population) - 1)
+            individuals.append(individual_4)
+            # Make list of their fitness
+            scores = [ranked_scores[individual_1], ranked_scores[individual_2], ranked_scores[individual_3], ranked_scores[individual_4]]
             
-            for (i, individual) in enumerate(ranked_population):
-                if point <= probs[i]:
-                    parent = individual
-                    break
-                    
-            # ensures different parents
+            # find the index of the best fitness score
+            if scoring_prop == 'polar':
+                best_index = np.argmax(scores)
+            else:
+                best_index = np.argmin(scores)
+
+            best_individual = individuals[best_index]
+            parent = ranked_population[best_individual]
+
             if parent not in parents:
-                parents.append(parent)'''
+                parents.append(parent)
 
-
+    elif selection_method == 'tournament_2':
         parents = []
+        # select 2 parents
+        while len(parents) < 2:
+            individuals = []
+            # select random individual 1
+            individual_1 =  random.randint(0, len(ranked_population) - 1)
+            individuals.append(individual_1)
 
+            # select random individual 2
+            individual_2 =  random.randint(0, len(ranked_population) - 1)
+            while individual_1 == individual_2:
+                individual_2 = random.randint(0, len(ranked_population) - 1)
+            individuals.append(individual_2)
+
+            # Make list of their fitness
+            scores = [ranked_scores[individual_1], ranked_scores[individual_2]]
+            
+            # find the index of the best fitness score
+            if scoring_prop == 'polar':
+                best_index = np.argmax(scores)
+            else:
+                best_index = np.argmin(scores)
+
+            best_individual = individuals[best_index]
+            parent = ranked_population[best_individual]
+
+            if parent not in parents:
+                parents.append(parent)
+
+    elif selection_method == 'roulette': #ranked_population, ranked_scores, selection_method, scoring_prop
+        parents = []
         # create wheel 
         wheel = []
-        # sum of scores
-        total = sum(ranked_scores)
         # bottom limit
         limit = 0
-        for x in range(len(ranked_scores)):
-            # fitness proportion
-            fitness = ranked_scores[x]/total
-            # appends the bottom and top limits of the pie, the score, and the polymer
-            wheel.append((limit, limit+fitness, ranked_scores[x], ranked_population[x]))
-            limit += fitness
+
+        if scoring_prop == 'opt_bg':
+            inversed_scores = [1/x for x in ranked_scores]
+            total = sum(inversed_scores)
+
+            for x in range(len(inversed_scores)):
+                # fitness proportion
+                fitness = inversed_scores[x]/total
+                # appends the bottom and top limits of the pie, the score, and the polymer
+                wheel.append((limit, limit+fitness, inversed_scores[x], ranked_population[x]))
+                limit += fitness
+
+
+        elif scoring_prop == 'polar':
+            # sum of scores
+            total = sum(ranked_scores)
+            for x in range(len(ranked_scores)):
+                # fitness proportion
+                fitness = ranked_scores[x]/total
+                # appends the bottom and top limits of the pie, the score, and the polymer
+                wheel.append((limit, limit+fitness, ranked_scores[x], ranked_population[x]))
+                limit += fitness
+            
+        else:
+            print('selection method does not work with negative numbers (solvation ratios)')
 
         # random number between 0 and 1
         r = random.random()
@@ -336,19 +440,36 @@ def parent_select(ranked_population, ranked_scores, selection_method, scoring_pr
     
     elif selection_method == 'SUS': #stochastic universal sampling
         parents = []
-
         # create wheel 
         wheel = []
-        # sum of scores
-        total = sum(ranked_scores)
         # bottom limit
         limit = 0
-        for x in range(len(ranked_scores)):
-            # fitness proportion
-            fitness = ranked_scores[x]/total
-            # appends the bottom and top limits of the pie, the score, and the polymer
-            wheel.append((limit, limit+fitness, ranked_scores[x], ranked_population[x]))
-            limit += fitness
+
+        if scoring_prop == 'opt_bg':
+            inversed_scores = [1/x for x in ranked_scores]
+            total = sum(inversed_scores)
+
+            for x in range(len(inversed_scores)):
+                # fitness proportion
+                fitness = inversed_scores[x]/total
+                # appends the bottom and top limits of the pie, the score, and the polymer
+                wheel.append((limit, limit+fitness, inversed_scores[x], ranked_population[x]))
+                limit += fitness
+
+
+        elif scoring_prop == 'polar':
+            # sum of scores
+            total = sum(ranked_scores)
+            for x in range(len(ranked_scores)):
+                # fitness proportion
+                fitness = ranked_scores[x]/total
+                # appends the bottom and top limits of the pie, the score, and the polymer
+                wheel.append((limit, limit+fitness, ranked_scores[x], ranked_population[x]))
+                limit += fitness
+
+        else:
+            print('selection method does not work with negative numbers (solvation ratios)')
+        
 
         # separation between selected points on wheel
         stepSize = 0.5
@@ -627,4 +748,21 @@ def init_gen(pop_size, selection_method, mutation_rate, elitism_perc, run_name, 
 
 
 if __name__ == '__main__':
-    main()
+    usage = "usage: %prog [options] "
+    parser = argparse.ArgumentParser(usage)
+
+
+    # sets input arguments
+    # parameter type = 'pop_size', 'selection_method', 'mutation_rate', or 'elitism_perc'
+    parser.add_argument('parameter_type', action='store', type=str)
+    # the value to change the paraemter type to
+    parser.add_argument('parameter', action='store', type=str)
+    # 'polar', 'opt_bg', or 'solv_eng'
+    parser.add_argument('chem_property', action='store', type=str)
+    # 'A', 'B', 'C', 'D', or 'E'
+    parser.add_argument('run_label', action='store', type=str)
+    
+    args = parser.parse_args()
+    
+    
+    main(args.parameter_type, args.parameter, args.chem_property, args.run_label)
