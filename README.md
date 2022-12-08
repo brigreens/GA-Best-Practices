@@ -28,5 +28,5 @@ Due to the potential for relatively costly calculations with GFN2-xTB, this GA w
 - pandas 1.1.5
 - scipy 1.7.3
 - rdkit 2022.3.3
-- pybel 
+- pybel (openbabel 2.4.1)
 - matplotlib 3.5.2 (data analysis)
