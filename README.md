@@ -21,7 +21,7 @@ The options for these arguments are:
 - `<run_label>`: This label is for reproducibility and each letter corresponds to an initial random state. Options are 'A', 'B', 'C', 'D', or 'E'
 
 # GA in a realistic test scenario
-Due to the potential for relatively costly calculations with GFN2-xTB, this GA was run with cron to automatically check if the previous generation's calculations were completed before starting the next generation. While the general workflow of the GA is the same, the code was manipulated to submit one generation at a time. The code to be used with cron can be found in `optimized_ga/GA_cron/GA_main.py`
+Due to the potential for relatively costly calculations with GFN2-xTB, this GA was run with cron to automatically check if the previous generation's calculations were completed before starting the next generation. While the general workflow of the GA is the same, the code was manipulated to submit one generation at a time.  GFN2-xTB calculations were done on the fly within each generation, instead of pulling from a pre-computed library like the first part of the paper. The code to be used with cron can be found in `optimized_ga/GA_cron/GA_main.py`
 
 # Package dependencies
 - numpy 1.21.6
